@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jalan Cuan — Simulasi Keuangan Pribadi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #EFE6D3;
+    --paper-dark: #E4D9C0;
+    --ledger: #16342B;
+    --ledger-light: #1F4A3B;
+    --ink: #1F2A24;
+    --brass: #A6772C;
+    --rust: #8C3B2E;
+    --rule: #B9AE93;
+    --sage: #7C9070;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body{
+    background: var(--paper);
+    background-image:
+      repeating-linear-gradient(180deg, rgba(0,0,0,0.015) 0px, rgba(0,0,0,0.015) 1px, transparent 1px, transparent 28px);
+    color: var(--ink);
+    font-family: 'IBM Plex Mono', monospace;
+    min-height: 100vh;
+    padding: 20px 14px 60px;
+  }
+  .wrap{ max-width: 980px; margin: 0 auto; }
+
+  /* Letterhead */
+  header.letterhead{
+    border: 2px solid var(--ledger);
+    border-bottom-width: 5px;
+    background: var(--paper-dark);
+    padding: 18px 22px;
+    display:flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  header.letterhead h1{
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: clamp(28px, 5vw, 40px);
+    margin: 0;
+    color: var(--ledger);
+    letter-spacing: 0.3px;
+  }
+  header.letterhead p.sub{
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--ink);
+    opacity: 0.75;
+  }
+  header.letterhead .meta{
+    text-align: right;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  header.letterhead .meta .big{
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--brass);
+  }
+
+  /* Screens */
+  .screen{ display:none; }
+  .screen.active{ display:block; }
+
+  /* Intro / job select */
+  .intro-card{
+    border: 1px solid var(--rule);
+    background: rgba(255,255,255,0.35);
+    padding: 22px;
+    margin-bottom: 16px;
+  }
+  .intro-card h2{
+    font-family: 'Fraunces', serif;
+    margin-top: 0;
+    font-size: 22px;
+    color: var(--ledger);
+  }
+  .intro-card p{ line-height: 1.6; font-size: 14px; }
+  .job-grid{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .job-card{
+    border: 1px solid var(--ledger);
+    padding: 14px;
+    background: var(--paper);
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .job-card:hover{ transform: translateY(-2px); box-shadow: 3px 4px 0 var(--ledger); }
+  .job-card.selected{ background: var(--ledger); color: var(--paper); }
+  .job-card .name{ font-family:'Fraunces', serif; font-weight:600; font-size:17px; }
+  .job-card .income{ font-size: 13px; margin-top: 6px; color: var(--brass); }
+  .job-card.selected .income{ color: #E9C878; }
+  .job-card .desc{ font-size: 12px; opacity: 0.75; margin-top: 6px; }
+
+  button.primary{
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 14px;
+    background: var(--ledger);
+    color: var(--paper);
+    border: none;
+    padding: 12px 22px;
+    cursor: pointer;
+    margin-top: 18px;
+  }
+  button.primary:disabled{ opacity: 0.4; cursor: not-allowed; }
+  button.primary:not(:disabled):hover{ background: var(--ledger-light); }
+
+  /* Game layout */
+  .grid{
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 760px){ .grid{ grid-template-columns: 1fr; } }
+
+  .panel{
+    border: 1px solid var(--rule);
+    background: rgba(255,255,255,0.4);
+    padding: 16px 18px;
+  }
+  .panel h3{
+    font-family: 'Fraunces', serif;
+    margin: 0 0 12px;
+    font-size: 16px;
+    color: var(--ledger);
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 8px;
+  }
+  .row{
+    display:flex;
+    justify-content: space-between;
+    font-size: 13px;
+    padding: 5px 0;
+    border-bottom: 1px dotted rgba(0,0,0,0.15);
+  }
+  .row.total{
+    font-weight: 600;
+    border-bottom: none;
+    border-top: 1px solid var(--ledger);
+    margin-top: 4px;
+    padding-top: 8px;
+    font-size: 14px;
+  }
+  .pos{ color: #2E6B3E; }
+  .neg{ color: var(--rust); }
+  .neutral{ color: var(--ink); }
+
+  .alloc-row{
+    display:flex;
+    align-items:center;
+    gap: 8px;
+    font-size: 13px;
+    margin: 8px 0;
+  }
+  .alloc-row label{ flex: 0 0 110px; }
+  .alloc-row input[type=range]{ flex: 1; accent-color: var(--brass); }
+  .alloc-row .val{ flex: 0 0 92px; text-align: right; font-size: 12px; }
+
+  .surplus-box{
+    margin-top: 10px;
+    padding: 8px 10px;
+    border: 1px dashed var(--rule);
+    font-size: 13px;
+    display:flex;
+    justify-content: space-between;
+  }
+  .surplus-box .amt.warn{ color: var(--rust); }
+
+  canvas{ width: 100%; height: 140px; display:block; }
+
+  .events{
+    margin-top: 16px;
+    border: 1px solid var(--rule);
+    background: rgba(255,255,255,0.3);
+    padding: 12px 16px;
+    max-height: 130px;
+    overflow-y: auto;
+    font-size: 12.5px;
+  }
+  .events h3{ font-family:'Fraunces', serif; margin: 0 0 8px; font-size: 14px; color: var(--ledger); }
+  .events .entry{ padding: 3px 0; border-bottom: 1px dotted rgba(0,0,0,0.1); }
+  .events .entry .m{ color: var(--brass); margin-right: 6px; }
+
+  .actions{ text-align:center; margin-top: 18px; }
+
+  /* End screen */
+  .end-grade{
+    text-align:center;
+    font-family: 'Fraunces', serif;
+    font-size: 72px;
+    font-weight: 700;
+    color: var(--brass);
+    line-height: 1;
+    margin: 10px 0;
+  }
+  .end-sub{ text-align:center; font-size: 14px; margin-bottom: 20px; }
+
+  .sr-only{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+  :focus-visible{ outline: 2px solid var(--brass); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce){ * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="letterhead">
+    <div>
+      <h1>Jalan Cuan</h1>
+      <p class="sub">Simulasi Keuangan Pribadi — 60 bulan menuju kebebasan finansial</p>
+    </div>
+    <div class="meta" id="headerMeta" style="display:none">
+      <div>Bulan <span id="mMonth">1</span> / 60</div>
+      <div class="big">Rp <span id="mNetWorth">0</span></div>
+    </div>
+  </header>
+
+  <!-- INTRO SCREEN -->
+  <section id="screenIntro" class="screen active">
+    <div class="intro-card">
+      <h2>Pilih Pekerjaan Awal</h2>
+      <p>Kamu akan menjalani 60 bulan (5 tahun) kehidupan finansial. Tiap bulan, alokasikan sisa gajimu ke tabungan, reksadana, saham, emas, atau kripto — masing-masing punya risiko dan potensi hasil berbeda. Bertahan dari kejadian tak terduga, dan bangun kekayaan sebanyak mungkin.</p>
+      <div class="job-grid" id="jobGrid"></div>
+      <button class="primary" id="btnStart" disabled>Mulai Simulasi</button>
+    </div>
+  </section>
+
+  <!-- GAME SCREEN -->
+  <section id="screenGame" class="screen">
+    <div class="grid">
+      <div class="panel">
+        <h3>Buku Kas — Bulan Ini</h3>
+        <div id="ledgerRows"></div>
+
+        <div class="surplus-box">
+          <span>Sisa dana untuk dialokasikan</span>
+          <span class="amt" id="surplusAmt">Rp 0</span>
+        </div>
+
+        <div id="allocRows" style="margin-top:14px"></div>
+
+        <div class="actions">
+          <button class="primary" id="btnNext">Lanjut Bulan →</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Portofolio</h3>
+        <div id="portfolioRows"></div>
+        <h3 style="margin-top:16px">Grafik Kekayaan Bersih</h3>
+        <canvas id="chart" width="440" height="140"></canvas>
+      </div>
+    </div>
+
+    <div class="events">
+      <h3>Catatan Peristiwa</h3>
+      <div id="eventLog"></div>
+    </div>
+  </section>
+
+  <!-- END SCREEN -->
+  <section id="screenEnd" class="screen">
+    <div class="intro-card" style="text-align:center">
+      <h2>5 Tahun Telah Berlalu</h2>
+      <div class="end-grade" id="endGrade">A</div>
+      <p class="end-sub" id="endSummary"></p>
+      <canvas id="chartEnd" width="700" height="180" style="max-width:600px;margin:0 auto"></canvas>
+      <div class="actions">
+        <button class="primary" id="btnRestart">Main Lagi</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const fmt = n => Math.round(n).toLocaleString('id-ID');
+
+  const JOBS = [
+    { name: "Buruh Pabrik", income: 3800000, expense: 2600000, desc: "Gaji stabil, ruang gerak sempit." },
+    { name: "Karyawan Kantoran", income: 6500000, expense: 3800000, desc: "Gaji lumayan, gaya hidup kota naik juga." },
+    { name: "Guru Honorer", income: 3200000, expense: 2300000, desc: "Penghasilan pas-pasan, tapi stabil." },
+    { name: "Pedagang Kecil", income: 5000000, expense: 3200000, desc: "Penghasilan naik-turun tiap bulan." },
+    { name: "Freelancer Desain", income: 5800000, expense: 3000000, desc: "Fleksibel, tapi kadang sepi order." }
+  ];
+
+  const ASSETS = [
+    { key: "reksadana", label: "Reksadana Pasar Uang", mean: 0.004, vol: 0.003 },
+    { key: "emas",      label: "Emas",                  mean: 0.003, vol: 0.02  },
+    { key: "saham",     label: "Saham",                 mean: 0.008, vol: 0.06  },
+    { key: "kripto",    label: "Kripto",                mean: 0.02,  vol: 0.18  }
+  ];
+
+  const EVENTS = [
+    { w: 30, text: "Bulan berjalan normal, tidak ada kejadian khusus.", fx: s => {} },
+    { w: 8,  text: "Dapat THR dari kantor.", fx: s => { const a = s.job.income * 0.8; s.cash += a; s.log(`+Rp ${fmt(a)} THR`); } },
+    { w: 8,  text: "Bonus kinerja bulan ini.", fx: s => { const a = s.job.income * 0.3; s.cash += a; s.log(`+Rp ${fmt(a)} bonus kinerja`); } },
+    { w: 7,  text: "Motor mogok, servis mendadak.", fx: s => { const a = 350000 + Math.random()*400000; s.cash -= a; s.log(`-Rp ${fmt(a)} servis motor`); } },
+    { w: 7,  text: "Sakit, biaya berobat ke klinik.", fx: s => { const a = 200000 + Math.random()*500000; s.cash -= a; s.log(`-Rp ${fmt(a)} biaya berobat`); } },
+    { w: 5,  text: "HP rusak, harus servis.", fx: s => { const a = 300000 + Math.random()*600000; s.cash -= a; s.log(`-Rp ${fmt(a)} servis HP`); } },
+    { w: 6,  text: "Ada saudara minta bantuan dana.", fx: s => { const a = 200000 + Math.random()*400000; s.cash -= a; s.log(`-Rp ${fmt(a)} bantuan keluarga`); } },
+    { w: 6,  text: "Diskon belanja bulanan, jadi hemat.", fx: s => { const a = 100000 + Math.random()*150000; s.cash += a; s.log(`+Rp ${fmt(a)} hemat belanja`); } },
+    { w: 5,  text: "Berita ekonomi: IHSG menguat tajam.", fx: s => { s.bonusReturn.saham = 0.08; s.log("Saham diuntungkan sentimen pasar"); } },
+    { w: 4,  text: "Berita ekonomi: pasar kripto bergejolak.", fx: s => { s.bonusReturn.kripto = -0.15; s.log("Kripto terguncang volatilitas"); } },
+    { w: 4,  text: "Harga emas naik karena ketidakpastian global.", fx: s => { s.bonusReturn.emas = 0.02; s.log("Emas naik sebagai aset aman"); } }
+  ];
+
+  let s = null; // game state
+
+  function pickJob(idx){
+    document.querySelectorAll('.job-card').forEach((el,i)=>{
+      el.classList.toggle('selected', i===idx);
+    });
+    s = s || {};
+    s._pendingJob = idx;
+    document.getElementById('btnStart').disabled = false;
+  }
+
+  function renderJobGrid(){
+    const grid = document.getElementById('jobGrid');
+    grid.innerHTML = '';
+    JOBS.forEach((j, i) => {
+      const el = document.createElement('div');
+      el.className = 'job-card';
+      el.tabIndex = 0;
+      el.innerHTML = `<div class="name">${j.name}</div>
+        <div class="income">Rp ${fmt(j.income)} / bulan</div>
+        <div class="desc">${j.desc}</div>`;
+      el.addEventListener('click', () => pickJob(i));
+      el.addEventListener('keypress', e => { if(e.key === 'Enter') pickJob(i); });
+      grid.appendChild(el);
+    });
+  }
+
+  function newGame(jobIdx){
+    s = {
+      job: JOBS[jobIdx],
+      month: 1,
+      cash: 800000,
+      portfolio: { reksadana: 0, saham: 0, emas: 0, kripto: 0 },
+      history: [800000],
+      logEntries: [],
+      bonusReturn: {},
+      log(msg){ this.logEntries.unshift({ m: this.month, text: msg }); }
+    };
+  }
+
+  function netWorth(){
+    return s.cash + Object.values(s.portfolio).reduce((a,b)=>a+b,0);
+  }
+
+  function currentExpense(){
+    // small random monthly variance
+    return Math.round(s.job.expense * (0.92 + Math.random()*0.16));
+  }
+
+  function renderLedger(){
+    const expense = s._expense = currentExpense();
+    const income = s.job.income;
+    const surplus = s.cash + income - expense;
+    document.getElementById('ledgerRows').innerHTML = `
+      <div class="row"><span>Pemasukan (${s.job.name})</span><span class="pos">+Rp ${fmt(income)}</span></div>
+      <div class="row"><span>Pengeluaran hidup</span><span class="neg">-Rp ${fmt(expense)}</span></div>
+      <div class="row total"><span>Saldo kas tersedia</span><span>Rp ${fmt(s.cash + income - expense)}</span></div>
+    `;
+    renderAllocation(surplus);
+  }
+
+  function renderAllocation(surplus){
+    const wrap = document.getElementById('allocRows');
+    wrap.innerHTML = '';
+    s._alloc = { reksadana: 0, saham: 0, emas: 0, kripto: 0 };
+    ASSETS.forEach(a => {
+      const row = document.createElement('div');
+      row.className = 'alloc-row';
+      row.innerHTML = `
+        <label for="r_${a.key}">${a.label}</label>
+        <input type="range" id="r_${a.key}" min="0" max="${Math.max(surplus,0)}" value="0" step="10000">
+        <span class="val" id="v_${a.key}">Rp 0</span>
+      `;
+      wrap.appendChild(row);
+      const input = row.querySelector('input');
+      input.addEventListener('input', () => updateAllocation(surplus));
+    });
+    updateAllocation(surplus);
+  }
+
+  function updateAllocation(surplus){
+    let total = 0;
+    ASSETS.forEach(a => {
+      const v = parseInt(document.getElementById('r_'+a.key).value, 10) || 0;
+      s._alloc[a.key] = v;
+      total += v;
+    });
+    // clamp if over surplus
+    if (total > surplus && surplus >= 0){
+      const scale = surplus / total;
+      ASSETS.forEach(a => {
+        s._alloc[a.key] = Math.round(s._alloc[a.key] * scale / 10000) * 10000;
+        document.getElementById('r_'+a.key).value = s._alloc[a.key];
+      });
+      total = Object.values(s._alloc).reduce((x,y)=>x+y,0);
+    }
+    ASSETS.forEach(a => {
+      document.getElementById('v_'+a.key).textContent = 'Rp ' + fmt(s._alloc[a.key]);
+    });
+    const remain = surplus - total;
+    const box = document.getElementById('surplusAmt');
+    box.textContent = 'Rp ' + fmt(remain) + ' (sisa ke tabungan)';
+    box.className = 'amt' + (remain < 0 ? ' warn' : '');
+  }
+
+  function renderPortfolio(){
+    const rows = ASSETS.map(a => {
+      const val = s.portfolio[a.key];
+      return `<div class="row"><span>${a.label}</span><span class="neutral">Rp ${fmt(val)}</span></div>`;
+    }).join('');
+    document.getElementById('portfolioRows').innerHTML = `
+      <div class="row"><span>Tabungan tunai</span><span class="neutral">Rp ${fmt(s.cash)}</span></div>
+      ${rows}
+      <div class="row total"><span>Total kekayaan bersih</span><span>Rp ${fmt(netWorth())}</span></div>
+    `;
+  }
+
+  function renderEvents(){
+    const el = document.getElementById('eventLog');
+    el.innerHTML = s.logEntries.slice(0, 40).map(e =>
+      `<div class="entry"><span class="m">Bln ${e.m}</span>${e.text}</div>`
+    ).join('') || '<div class="entry">Belum ada catatan.</div>';
+  }
+
+  function renderHeader(){
+    document.getElementById('mMonth').textContent = s.month;
+    document.getElementById('mNetWorth').textContent = fmt(netWorth());
+  }
+
+  function drawChart(canvasId, history){
+    const canvas = document.getElementById(canvasId);
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0,0,w,h);
+    if (history.length < 2) return;
+    const max = Math.max(...history, 1);
+    const min = Math.min(...history, 0);
+    const range = Math.max(max - min, 1);
+    const pad = 8;
+    ctx.strokeStyle = '#B9AE93';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(pad, h-pad); ctx.lineTo(w-pad, h-pad);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#A6772C';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    history.forEach((val, i) => {
+      const x = pad + (i/(history.length-1)) * (w - pad*2);
+      const y = h - pad - ((val - min)/range) * (h - pad*2);
+      if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+
+    ctx.fillStyle = '#16342B';
+    const lastX = pad + (w - pad*2);
+    const lastY = h - pad - ((history[history.length-1]-min)/range)*(h-pad*2);
+    ctx.beginPath();
+    ctx.arc(lastX, lastY, 3, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  function pickEvent(){
+    const totalW = EVENTS.reduce((a,e)=>a+e.w, 0);
+    let r = Math.random() * totalW;
+    for (const e of EVENTS){
+      if (r < e.w) return e;
+      r -= e.w;
+    }
+    return EVENTS[0];
+  }
+
+  function nextMonth(){
+    const income = s.job.income;
+    const expense = s._expense;
+    let cash = s.cash + income - expense;
+    const total = Object.values(s._alloc).reduce((a,b)=>a+b,0);
+    cash -= total;
+    ASSETS.forEach(a => { s.portfolio[a.key] += s._alloc[a.key]; });
+    s.cash = Math.max(cash, 0);
+
+    s.bonusReturn = {};
+    const ev = pickEvent();
+    ev.fx(s);
+    s.log(ev.text);
+
+    ASSETS.forEach(a => {
+      const bonus = s.bonusReturn[a.key] || 0;
+      const ret = a.mean + bonus + (Math.random()*2-1) * a.vol;
+      s.portfolio[a.key] = Math.max(0, s.portfolio[a.key] * (1 + ret));
+    });
+
+    if (s.cash < 0) s.cash = 0;
+
+    s.month += 1;
+    s.history.push(netWorth());
+
+    if (s.month > 60){
+      showEnd();
+      return;
+    }
+
+    renderHeader();
+    renderLedger();
+    renderPortfolio();
+    renderEvents();
+    drawChart('chart', s.history);
+  }
+
+  function showEnd(){
+    document.getElementById('screenGame').classList.remove('active');
+    document.getElementById('screenEnd').classList.add('active');
+    document.getElementById('headerMeta').style.display = 'none';
+
+    const nw = netWorth();
+    let grade, msg;
+    if (nw >= 300000000){ grade='S'; msg='Luar biasa — kekayaanmu tumbuh jauh melampaui rata-rata dalam 5 tahun.'; }
+    else if (nw >= 150000000){ grade='A'; msg='Sangat baik — strategi alokasimu terbukti efektif.'; }
+    else if (nw >= 80000000){ grade='B'; msg='Cukup solid — kamu berhasil membangun aset dengan disiplin.'; }
+    else if (nw >= 30000000){ grade='C'; msg='Lumayan — masih ada ruang untuk lebih agresif menabung dan investasi.'; }
+    else { grade='D'; msg='Perjalanan yang berat — coba alokasikan lebih awal ke instrumen bertumbuh.'; }
+
+    document.getElementById('endGrade').textContent = grade;
+    document.getElementById('endSummary').innerHTML =
+      `Setelah 60 bulan, kekayaan bersihmu: <strong>Rp ${fmt(nw)}</strong><br>${msg}`;
+    drawChart('chartEnd', s.history);
+  }
+
+  function startGame(){
+    if (s._pendingJob === undefined) return;
+    newGame(s._pendingJob);
+    document.getElementById('screenIntro').classList.remove('active');
+    document.getElementById('screenGame').classList.add('active');
+    document.getElementById('headerMeta').style.display = 'block';
+    renderHeader();
+    renderLedger();
+    renderPortfolio();
+    renderEvents();
+    drawChart('chart', s.history);
+  }
+
+  function restart(){
+    document.getElementById('screenEnd').classList.remove('active');
+    document.getElementById('screenIntro').classList.add('active');
+    document.getElementById('btnStart').disabled = true;
+    s = null;
+    renderJobGrid();
+  }
+
+  document.getElementById('btnStart').addEventListener('click', startGame);
+  document.getElementById('btnNext').addEventListener('click', nextMonth);
+  document.getElementById('btnRestart').addEventListener('click', restart);
+
+  renderJobGrid();
+})();
+</script>
+</body>
+</html>
